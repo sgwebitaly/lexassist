@@ -140,7 +140,7 @@ ${fileText.slice(0, 20000)}`
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           max_tokens: 4000,
           system: "Sei un assistente specializzato nell'analisi di bandi pubblici per avvocati italiani. Rispondi sempre e solo con JSON valido, nessun testo aggiuntivo. Estrai TUTTE le informazioni presenti nel documento senza omettere nulla.",
           messages,
@@ -171,7 +171,7 @@ ${fileText.slice(0, 20000)}`
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           max_tokens: 4000,
           system: `Sei un assistente legale specializzato nella redazione di domande di iscrizione a short list per avvocati italiani. 
 Genera documenti formali, professionali e completi in italiano. 
