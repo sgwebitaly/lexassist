@@ -356,6 +356,11 @@ function UploadStage({ mode, setMode, file, dragOver, setDragOver, handleDrop, h
 
   return (
     <div>
+      <div style={{ background: "rgba(201,169,110,0.08)", border: "1px solid rgba(201,169,110,0.25)", borderRadius: "8px", padding: "10px 16px", marginBottom: "28px", display: "flex", alignItems: "center", gap: "10px" }}>
+        <span style={{ fontSize: "13px", color: "#c9a96e", fontWeight: "600", letterSpacing: "0.05em" }}>BETA</span>
+        <span style={{ fontSize: "13px", color: "#8a8070", lineHeight: 1.5 }}>In questa versione beta i dati del profilo non vengono salvati. Dovrai reinserirli ad ogni elaborazione.</span>
+      </div>
+
       <div style={{ marginBottom: "36px" }}>
         <h1 style={{ fontSize: "32px", fontWeight: "400", color: "#f0e8d8", marginBottom: "10px" }}>Come vuoi procedere?</h1>
         <p style={{ color: "#7a7080", fontSize: "15px", lineHeight: 1.6 }}>Scegli il tipo di documento che hai a disposizione.</p>
