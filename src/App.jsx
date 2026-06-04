@@ -108,7 +108,7 @@ export default function App() {
         messages
       );
       const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("Nessun JSON trovato nella risposta");
+      if (!jsonMatch) throw new Error("Risposta AI: " + text.slice(0, 300));
       setBandoAnalysis(JSON.parse(jsonMatch[0]));
       setStage(STAGES.PROFILE);
     } catch (err) {
