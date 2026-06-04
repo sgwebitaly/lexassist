@@ -65,7 +65,10 @@ export default function App() {
     try {
       const proxyUrl = `/api/fetch-bando?url=${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl);
-      if (!response.ok) throw new Error("Impossibile scaricare il bando");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Impossibile scaricare il bando");
+      }
       const blob = await response.blob();
       const fileName = url.split("/").pop() || "bando.pdf";
       const f = new File([blob], fileName.endsWith(".pdf") ? fileName : fileName + ".pdf", { type: "application/pdf" });
