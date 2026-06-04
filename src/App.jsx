@@ -98,7 +98,11 @@ export default function App() {
       const messages = [{
         role: "user",
         content: [
-          { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } },
+          { 
+            type: "document", 
+            source: { type: "base64", media_type: "application/pdf", data: base64Data },
+            cache_control: { type: "ephemeral" }
+          },
           { type: "text", text: prompt }
         ]
       }];
