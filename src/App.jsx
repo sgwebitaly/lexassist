@@ -63,15 +63,51 @@ export default function App() {
     setStage(STAGES.ANALYZING);
     setError("");
     try {
-      // Scarica il PDF tramite proxy per evitare CORS
       const proxyUrl = `/api/fetch-bando?url=${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error("Impossibile scaricare il bando");
       const blob = await response.blob();
       const fileName = url.split("/").pop() || "bando.pdf";
-      const f = new File([blob], fileName, { type: "application/pdf" });
+      const f = new File([blob], fileName.endsWith(".pdf") ? fileName : fileName + ".pdf", { type: "application/pdf" });
       setFile(f);
-      await analyzeBandoFile(f);
+
+      // Converti in base64 e manda direttamente a Claude come documento
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(f);
+      });
+
+      const prompt = `Analizza questo bando ed estrai TUTTE le informazioni chiave senza omettere nulla. Rispondi SOLO con un oggetto JSON valido, senza markdown, senza backtick. Struttura:
+{
+  "titoloBando": "string",
+  "enteEmittente": "string",
+  "scadenza": "string",
+  "oggetto": "string",
+  "requisitiPrincipali": ["elenca TUTTI i requisiti uno per uno"],
+  "documentiRichiesti": ["elenca TUTTI i documenti uno per uno"],
+  "dichiarazioni": ["elenca TUTTE le dichiarazioni una per una, inclusi sottopunti"],
+  "modalitaInvio": "string",
+  "noteImportanti": "string"
+}`;
+
+      const messages = [{
+        role: "user",
+        content: [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } },
+          { type: "text", text: prompt }
+        ]
+      }];
+
+      const text = await callClaude(
+        "Sei un assistente specializzato nell'analisi di bandi pubblici italiani. Rispondi solo con JSON valido, nessun testo aggiuntivo. Estrai TUTTE le informazioni senza omettere nulla.",
+        messages
+      );
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Nessun JSON trovato nella risposta");
+      setBandoAnalysis(JSON.parse(jsonMatch[0]));
+      setStage(STAGES.PROFILE);
     } catch (err) {
       setError("Errore nel caricamento automatico del bando: " + (err.message || "riprova."));
       setStage(STAGES.UPLOAD);
