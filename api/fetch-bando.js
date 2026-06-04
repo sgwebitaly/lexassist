@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const decoded = decodeURIComponent(url);
 
     // Sicurezza: accetta solo URL da domini italiani PA o albocollaboratori
-    const allowed = /^https?:\/\/(.*\.)?(albocollaboratori\.it|comune\.|provincia\.|regione\.|asl|aziendaospedaliera|gov\.it|pubblica\.istruzione|cnr\.it)/i;
+    const allowed = /^https?:\/\/.*(albocollaboratori\.it|\.it)/i;
     if (!allowed.test(decoded)) {
       return res.status(403).json({ error: 'Dominio non autorizzato' });
     }
