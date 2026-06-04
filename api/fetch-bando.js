@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const decoded = decodeURIComponent(url);
 
     // Sicurezza: accetta solo URL da domini italiani PA o albocollaboratori
-    const allowed = /^https?:\/\/.*(albocollaboratori\.it|\.it)/i;
+    const allowed = /^https?:\/\/(.*\.)?(albocollaboratori\.it|comune\.|provincia\.|regione\.|asl|aziendaospedaliera|gov\.it|pubblica\.istruzione|cnr\.it)/i;
     if (!allowed.test(decoded)) {
       return res.status(403).json({ error: 'Dominio non autorizzato' });
     }
@@ -23,7 +23,20 @@ export default async function handler(req, res) {
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    const contentType = response.headers.get('content-type') || 'application/pdf';
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Se non è un PDF o documento Word, rifiuta
+    const isDoc = contentType.includes('pdf') || 
+                  contentType.includes('msword') || 
+                  contentType.includes('officedocument') ||
+                  contentType.includes('octet-stream');
+    
+    if (!isDoc) {
+      return res.status(422).json({ 
+        error: `Il link non punta direttamente a un file PDF (tipo rilevato: ${contentType}). Usa il link diretto al PDF.` 
+      });
+    }
+
     const buffer = await response.arrayBuffer();
 
     res.setHeader('Content-Type', contentType);
