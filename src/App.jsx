@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import mammoth from "mammoth";
 
 const STAGES = {
@@ -37,13 +37,49 @@ export default function App() {
   const [stage, setStage] = useState(STAGES.UPLOAD);
   const [mode, setMode] = useState(null);
   const [file, setFile] = useState(null);
+  const [bandoUrl, setBandoUrl] = useState(null);
   const [bandoAnalysis, setBandoAnalysis] = useState(null);
   const [modelloText, setModelloText] = useState("");
   const [profile, setProfile] = useState(initialProfile);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [autoLoading, setAutoLoading] = useState(false);
   const fileInputRef = useRef();
+
+  // Legge il parametro ?bando= dall'URL e avvia l'analisi automatica
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const bando = params.get("bando");
+    if (bando) {
+      setBandoUrl(bando);
+      setMode(MODES.BANDO);
+      fetchAndAnalyzeBandoFromUrl(bando);
+    }
+  }, []);
+
+  const fetchAndAnalyzeBandoFromUrl = async (url) => {
+    setAutoLoading(true);
+    setStage(STAGES.ANALYZING);
+    setError("");
+    try {
+      // Scarica il PDF tramite proxy per evitare CORS
+      const proxyUrl = `/api/fetch-bando?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error("Impossibile scaricare il bando");
+      const blob = await response.blob();
+      const fileName = url.split("/").pop() || "bando.pdf";
+      const f = new File([blob], fileName, { type: "application/pdf" });
+      setFile(f);
+      await analyzeBandoFile(f);
+    } catch (err) {
+      setError("Errore nel caricamento automatico del bando: " + (err.message || "riprova."));
+      setStage(STAGES.UPLOAD);
+      setMode(MODES.BANDO);
+    } finally {
+      setAutoLoading(false);
+    }
+  };
 
   const handleFile = (f) => {
     if (!f) return;
@@ -113,10 +149,7 @@ export default function App() {
   };
 
   // PERCORSO A — analisi bando
-  const analyzeBando = async () => {
-    if (!file) return;
-    setStage(STAGES.ANALYZING);
-    setError("");
+  const analyzeBandoFile = async (f) => {
     try {
       const prompt = `Analizza questo bando ed estrai TUTTE le informazioni chiave senza omettere nulla. Rispondi SOLO con un oggetto JSON valido, senza markdown, senza backtick. Struttura:
 {
@@ -130,7 +163,7 @@ export default function App() {
   "modalitaInvio": "string",
   "noteImportanti": "string"
 }`;
-      const messages = await buildFileMessages(file, prompt);
+      const messages = await buildFileMessages(f, prompt);
       const text = await callClaude(
         "Sei un assistente specializzato nell'analisi di bandi pubblici italiani. Rispondi solo con JSON valido, nessun testo aggiuntivo. Estrai TUTTE le informazioni senza omettere nulla.",
         messages
@@ -142,7 +175,15 @@ export default function App() {
     } catch (err) {
       setError("Errore nell'analisi del bando: " + (err.message || "riprova."));
       setStage(STAGES.UPLOAD);
+      setMode(MODES.BANDO);
     }
+  };
+
+  const analyzeBando = async () => {
+    if (!file) return;
+    setStage(STAGES.ANALYZING);
+    setError("");
+    await analyzeBandoFile(file);
   };
 
   // PERCORSO B — estrai testo dal modello
@@ -309,7 +350,7 @@ ${profileData()}`
             onAnalyze={handleAnalyze}
           />
         )}
-        {stage === STAGES.ANALYZING && <LoadingStage message={mode === MODES.MODELLO ? "Lettura del modello in corso..." : "Analisi del bando in corso..."} sub={mode === MODES.MODELLO ? "Estrazione della struttura del modello ufficiale" : "L'AI sta estraendo requisiti, scadenze e dichiarazioni"} />}
+        {stage === STAGES.ANALYZING && <LoadingStage message={autoLoading ? "Caricamento bando da albocollaboratori..." : mode === MODES.MODELLO ? "Lettura del modello in corso..." : "Analisi del bando in corso..."} sub={autoLoading ? "Il bando viene scaricato e analizzato automaticamente" : mode === MODES.MODELLO ? "Estrazione della struttura del modello ufficiale" : "L'AI sta estraendo requisiti, scadenze e dichiarazioni"} />}
         {stage === STAGES.GENERATING && <LoadingStage message="Generazione del documento in corso..." sub={mode === MODES.MODELLO ? "L'AI sta compilando il modello con i tuoi dati" : "L'AI sta redigendo la domanda personalizzata"} />}
         {stage === STAGES.PROFILE && (
           <ProfileStage
