@@ -104,11 +104,11 @@ export default function App() {
       }];
 
       const text = await callClaude(
-        "Sei un assistente specializzato nell'analisi di bandi pubblici italiani. Rispondi solo con JSON valido, nessun testo aggiuntivo. Estrai TUTTE le informazioni senza omettere nulla.",
+        "Sei un assistente specializzato nell'analisi di bandi pubblici italiani. Rispondi solo con JSON valido, nessun testo aggiuntivo. Sii sintetico: massimo 15 parole per ogni elemento degli array, massimo 5 elementi per array tranne dichiarazioni (max 10). Estrai le informazioni essenziali senza copiare testo verbatim.",
         messages
       );
       const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("Risposta AI: " + text.slice(0, 300));
+      if (!jsonMatch) throw new Error("Nessun JSON trovato nella risposta");
       setBandoAnalysis(JSON.parse(jsonMatch[0]));
       setStage(STAGES.PROFILE);
     } catch (err) {
@@ -204,7 +204,7 @@ export default function App() {
 }`;
       const messages = await buildFileMessages(f, prompt);
       const text = await callClaude(
-        "Sei un assistente specializzato nell'analisi di bandi pubblici italiani. Rispondi solo con JSON valido, nessun testo aggiuntivo. Estrai TUTTE le informazioni senza omettere nulla.",
+        "Sei un assistente specializzato nell'analisi di bandi pubblici italiani. Rispondi solo con JSON valido, nessun testo aggiuntivo. Sii sintetico: massimo 15 parole per ogni elemento degli array, massimo 5 elementi per array tranne dichiarazioni (max 10). Estrai le informazioni essenziali senza copiare testo verbatim.",
         messages
       );
       const jsonMatch = text.match(/\{[\s\S]*\}/);
