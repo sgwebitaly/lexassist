@@ -317,6 +317,8 @@ Struttura richiesta:
       }]);
       setResult(text);
       setStage(STAGES.RESULT);
+      // Log utilizzo in background
+      logUtilizzo("bando");
     } catch (err) {
       setError("Errore nella generazione: " + (err.message || "riprova."));
       setStage(STAGES.PROFILE);
@@ -344,10 +346,29 @@ ${profileData()}`
       }]);
       setResult(text);
       setStage(STAGES.RESULT);
+      // Log utilizzo in background
+      logUtilizzo("modello");
     } catch (err) {
       setError("Errore nella compilazione: " + (err.message || "riprova."));
       setStage(STAGES.PROFILE);
     }
+  };
+
+  const logUtilizzo = (modalita) => {
+    fetch("/api/log-utilizzo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        avvocato: profile.avvocatoNome,
+        email: profile.email,
+        pec: profile.pec,
+        ordine: profile.ordineAppartenenza,
+        iscrizione: profile.iscrizioneOrdine,
+        studio: profile.studioNome,
+        bando: bandoAnalysis?.titoloBando || modelloText.slice(0, 80) || "",
+        modalita,
+      }),
+    }).catch(() => {}); // silenzioso — non blocca l'utente
   };
 
   const generateDomanda = () => {
