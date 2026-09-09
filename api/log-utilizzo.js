@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -9,10 +11,7 @@ export default async function handler(req, res) {
   try {
     const { avvocato, email, pec, ordine, iscrizione, studio, bando, modalita } = req.body;
 
-    // Ottieni access token tramite JWT del service account
     const token = await getAccessToken();
-
-    // Scrivi riga sul Google Sheet
     const sheetId = process.env.GOOGLE_SHEET_ID;
     const now = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
 
@@ -37,7 +36,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true });
   } catch (error) {
-    console.error('log-utilizzo error:', error);
+    console.error('log-utilizzo error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 }
@@ -55,8 +54,7 @@ async function getAccessToken() {
     iat: now,
   };
 
-  // Crea JWT firmato con RS256
-  const jwt = await createJWT(payload, privateKey);
+  const jwt = createJWT(payload, privateKey);
 
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -65,31 +63,21 @@ async function getAccessToken() {
   });
 
   const tokenData = await tokenResponse.json();
-  if (!tokenData.access_token) throw new Error('Failed to get access token: ' + JSON.stringify(tokenData));
+  if (!tokenData.access_token) throw new Error('Token error: ' + JSON.stringify(tokenData));
   return tokenData.access_token;
 }
 
-async function createJWT(payload, privateKeyPem) {
+function base64url(input) {
+  const buf = Buffer.isBuffer(input) ? input : Buffer.from(JSON.stringify(input));
+  return buf.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+function createJWT(payload, privateKeyPem) {
   const header = { alg: 'RS256', typ: 'JWT' };
-  const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const signingInput = `${encodedHeader}.${encodedPayload}`;
-
-  // Importa la chiave privata
-  const pemContents = privateKeyPem.replace(/-----BEGIN PRIVATE KEY-----/, '').replace(/-----END PRIVATE KEY-----/, '').replace(/\s/g, '');
-  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryDer.buffer,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const encoder = new TextEncoder();
-  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, encoder.encode(signingInput));
-  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-
-  return `${signingInput}.${encodedSignature}`;
+  const signingInput = `${base64url(header)}.${base64url(payload)}`;
+  const sign = crypto.createSign('RSA-SHA256');
+  sign.update(signingInput);
+  const signature = sign.sign(privateKeyPem, 'base64')
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  return `${signingInput}.${signature}`;
 }
